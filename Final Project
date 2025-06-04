@@ -1,0 +1,86 @@
+#include <AsyncDelay.h>
+#include <Adafruit_CircuitPlayground.h>
+
+AsyncDelay delay_1s;
+
+const int switchPin = 7;
+const int leftbutton = 5;
+const int rightbutton = 4;
+
+volatile int count = 0;
+volatile int minutes = 0;
+
+int i = 0;
+int locklight [] = {0,0,0,0,0,0,0,0,0,0};
+
+uint32_t color = CircuitPlayground.strip.Color(64, 20, 0);
+uint32_t colorlock = CircuitPlayground.strip.Color(255, 80, 0);
+int delayTime = 100;
+
+
+void setup() {
+  CircuitPlayground.begin();
+  attachInterrupt(digitalPinToInterrupt(leftbutton), leftbuttonhandle, FALLING);
+  Serial.begin(9600);
+}
+
+void loop() {
+  bool isTimerOn = (digitalRead(switchPin) == HIGH);
+  if (isTimerOn) {
+      delay_1s.start(1000, AsyncDelay::MILLIS);
+    // Sweep forward
+    for (i = 0; i < 10; i++) {
+      if (delay_1s.isExpired()) {
+        count++;
+        Serial.print(minutes);
+        Serial.print("\t");
+        Serial.println(count % 60);
+        delay_1s.repeat();
+      }
+      if (locklight [i-1]== 0){
+      CircuitPlayground.setPixelColor(i-1, 0);
+      }
+      if (locklight [i]==0) {
+        CircuitPlayground.setPixelColor(i, color);
+      }
+      delay(delayTime);
+    }
+
+    // Sweep backward
+    for (i = 8; i >= 0; i--) {
+      if (delay_1s.isExpired()) {
+      count++;
+      Serial.print(minutes);
+      Serial.print("\t");
+      Serial.println(count % 60);
+      delay_1s.repeat();
+
+    }
+      // if flag: stop loop, lock in color
+      if (locklight [i+1]== 0){
+        CircuitPlayground.setPixelColor(i+1, 0);
+      }
+      if (locklight [i]==0) {
+        CircuitPlayground.setPixelColor(i, color);
+      }
+      delay(delayTime);
+    }
+    if (CircuitPlayground.leftButton()) {
+        Serial.println("Restarting timer");
+        count = 0;
+        minutes = 0;
+        pixeln = 0;
+        Serial.println(count);
+      }
+
+      delay_1s.repeat();
+      digitalWrite(LED_BUILTIN, LOW);
+    }
+  }
+
+void leftbuttonhandle()
+{
+  locklight [i] = 1;
+  CircuitPlayground.setPixelColor (i, colorlock);
+  Serial.println(i);
+}
