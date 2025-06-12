@@ -1,55 +1,65 @@
-#include <AsyncDelay.h>
-#include <Adafruit_CircuitPlayground.h>
+#include <AsyncDelay.h> //include the async delay library
+#include <Adafruit_CircuitPlayground.h> //include circuplay ground library
 
-AsyncDelay delay_1s;
+AsyncDelay delay_1s; //declar an async timer object
 
-const int switchPin = 7;
-const int leftbutton = 5;
+const int switchPin = 7; //storing the switch pin to the variable switchpin
+const int leftbutton = 5; //s
 const int rightbutton = 4;
 
-volatile int count = 0;
-volatile int minutes = 0;
+volatile int count = 0; // interger count to 0
+volatile int minutes = 0; //
 
-int i = 0;
-int locklight [] = {0,0,0,0,0,0,0,0,0,0};
+int i = 0; //setting interger i to 0
+int locklight [] = {0,0,0,0,0,0,0,0,0,0}; // setting lock light array to set all lights to false (off)
 
-uint32_t color = CircuitPlayground.strip.Color(64, 20, 0);
+uint32_t color = CircuitPlayground.strip.Color(64, 20, 0); //seting the variable to orange
 uint32_t colorlock = CircuitPlayground.strip.Color(255, 80, 0);
-int delayTime = 100;
+int delayTime = 200; //declaring delayTime as ###ms (how fast light moves)
 
+bool isTimerOn = CircuitPlayground.slideSwitch();
+bool win = false; //set win to false
 
 void setup() {
-  CircuitPlayground.begin();
-  attachInterrupt(digitalPinToInterrupt(leftbutton), leftbuttonhandle, FALLING);
-  Serial.begin(9600);
+  CircuitPlayground.begin(); //intializing the board
+  attachInterrupt(digitalPinToInterrupt(leftbutton), leftbuttonhandle, FALLING); //attaching the button to the 'leftbuttonhandle' variable when it's pressed
+  Serial.begin(9600); // Begin serial communication
 }
 
 void loop() {
-  bool isTimerOn = (digitalRead(switchPin) == HIGH);
+  isTimerOn = CircuitPlayground.slideSwitch(); // timer is on when switch is to the right
   if (isTimerOn) {
-      delay_1s.start(1000, AsyncDelay::MILLIS);
-    // Sweep forward
-    for (i = 0; i < 10; i++) {
-      if (delay_1s.isExpired()) {
-        count++;
-        Serial.print(minutes);
-        Serial.print("\t");
-        Serial.println(count % 60);
-        delay_1s.repeat();
+    for (int j = 0; j<10; j++){//look for lights that were already locked and turn them back on after switch on
+      if (locklight[j]==1) {
+        CircuitPlayground.setPixelColor(j, colorlock);
       }
-      if (locklight [i-1]== 0){
+    }
+      delay_1s.start(1000, AsyncDelay::MILLIS);//restart 1 second delay.
+    // Sweep forward
+    for (i = 0; i < 10; i++) {//sweep lights forward
+      if (delay_1s.isExpired()) {//one second has passed
+        count++;// add one to count
+        Serial.print(minutes); //print minutes
+        Serial.print("\t"); // have a space between minutes and count
+        Serial.println(count % 60);// print second
+        delay_1s.repeat(); // reset timer
+      }
+      if (locklight [i-1]== 0){//turn off light after sweep hits it if it was not locked before
       CircuitPlayground.setPixelColor(i-1, 0);
       }
-      if (locklight [i]==0) {
+      if (locklight [i]==0) {//turn on the LED if it's not locked
         CircuitPlayground.setPixelColor(i, color);
       }
-      delay(delayTime);
+      delay(delayTime); //time each light stays on.
     }
 
     // Sweep backward
     for (i = 8; i >= 0; i--) {
       if (delay_1s.isExpired()) {
       count++;
+      if (count == 60){//if one minute has passed, add one to minutes.
+        minutes++;
+      }
       Serial.print(minutes);
       Serial.print("\t");
       Serial.println(count % 60);
@@ -69,18 +79,56 @@ void loop() {
         Serial.println("Restarting timer");
         count = 0;
         minutes = 0;
-        pixeln = 0;
         Serial.println(count);
       }
 
       delay_1s.repeat();
       digitalWrite(LED_BUILTIN, LOW);
     }
+    else{
+    CircuitPlayground.clearPixels();
+    }
   }
-
-void leftbuttonhandle()
+void leftbuttonhandle()// interrupt for when left button is pressed
 {
-  locklight [i] = 1;
-  CircuitPlayground.setPixelColor (i, colorlock);
-  Serial.println(i);
+  if (isTimerOn) {
+    for (int j = 0; j<10; j++){
+      if (locklight[j]==1) {
+        CircuitPlayground.setPixelColor(j, colorlock);
+      }
+    }
+    if (locklight [i] == 1) {// if light is locked go into loop
+      CircuitPlayground.clearPixels();// clear light
+      Serial.println("Restarting timer");// print restarting timer
+      delayTime = 200;// set delay time back to 200ms
+      for (int j=0 ; j<10; j++){
+        locklight [j]=0;
+      }
+      count = 0;// set count back to 0
+      minutes = 0; // set count back to 0
+    }
+    if (locklight [i] == 0) {// if light is not lock
+      locklight [i] = 1;//lock it
+      //delayTime -= 2;
+    }
+    win = true; // check if player has all LED locked
+    for (int j=0 ; j<10; j++){
+      if (locklight [j]==0){// if there's any led that's not locked, then win is false.
+        win = false;
+      }
+    }
+    if (win == true){// if win is true
+      Serial.print("Win time:");// print wint time:
+      Serial.print(minutes);
+      Serial.print("\t");
+      Serial.println(count);
+      count = 0;
+      minutes = 0;
+    }
+    CircuitPlayground.setPixelColor (i, colorlock);
+    //Serial.println(i);
+  }
+  else{
+    CircuitPlayground.clearPixels();// if timer is off clear LED
+  }  
 }
