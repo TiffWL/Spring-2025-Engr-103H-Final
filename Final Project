@@ -91,13 +91,13 @@ void loop() {
   }
 void leftbuttonhandle()// interrupt for when left button is pressed
 {
-  if (isTimerOn) {
-    for (int j = 0; j<10; j++){
-      if (locklight[j]==1) {
-        CircuitPlayground.setPixelColor(j, colorlock);
+  if (isTimerOn) {//if the timer is on
+    for (int j = 0; j<10; j++){//look at all pixes
+      if (locklight[j]==1) {// if pixel is already lock
+        CircuitPlayground.setPixelColor(j, colorlock);// keep it on as a darker orange.
       }
     }
-    if (locklight [i] == 1) {// if light is locked go into loop
+    if (locklight [i] == 1) {// if light is locked go into loop (lost)
       CircuitPlayground.clearPixels();// clear light
       Serial.println("Restarting timer");// print restarting timer
       delayTime = 200;// set delay time back to 200ms
